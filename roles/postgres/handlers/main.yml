@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: MIT-0
+---
+# handlers file for postgres
+- name: Restart rsyslog
+  ansible.builtin.systemd:
+    name: rsyslog
+    state: restarted
+    enabled: true
+    daemon_reload: true
+
+
+- name: Start pgbouncer
+  ansible.builtin.systemd:
+    name: pgbouncer
+    state: started
+    enabled: true
+    daemon_reload: true

@@ -1,0 +1,74 @@
+# sss
+---
+# tasks file for nfs_client
+- name: NFS Client
+  block:
+    - name: 安裝 (Ubuntu)
+      ansible.builtin.apt:
+        name:
+          - nfs-common
+        update_cache: true
+        state: present
+      when: ansible_distribution == "Ubuntu"
+
+    - name: 安裝 (Rocky)
+      ansible.builtin.yum:
+        name:
+          - nfs-utils
+        state: present
+      when: ansible_distribution == "Rocky"
+
+    - name: 建立 group
+      ansible.builtin.group:
+        name: "{{ group }}"
+        gid: "{{ gid }}"
+        system: true
+        state: present
+
+    - name: 建立 user
+      ansible.builtin.user:
+        name: "{{ user }}"
+        uid: "{{ uid }}"
+        group: postgres
+        shell: /sbin/nologin
+        system: true
+        create_home: false
+        state: present
+
+    - name: 上傳掛載腳本
+      ansible.builtin.template:
+        src: "mount_nfs.sh"
+        dest: /usr/local/bin
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: 为 user 添加免密 sudo 权限
+      ansible.builtin.copy:
+        content: "{{ user }} ALL=(root) NOPASSWD: /usr/local/bin/mount_nfs.sh\n"
+        dest: /etc/sudoers.d/mount_nfs
+        mode: '0440'
+        owner: root
+        group: root
+        validate: '/usr/sbin/visudo -cf %s'
+
+    - name: Create mount directory
+      ansible.builtin.file:
+        path: "{{ item.client_path }}"
+        state: directory
+        mode: '0755'
+      loop: "{{ nfs_dirs }}"
+
+    # - name: Mount NFS share
+    #  ansible.posix.mount:
+    #    path: "{{ item.client_path }}"
+    #    src: "{{ server_ip }}:{{ item.server_path }}"
+    #    fstype: nfs
+    #    opts: "rw,nosuid,noexec"
+    #    state: mounted
+    #  loop: "{{ nfs_dirs }}"
+
+    - name: Mount NFS share
+      ansible.builtin.command:
+        cmd: "sudo bash /usr/local/bin/mount_nfs.sh"
+      changed_when: false

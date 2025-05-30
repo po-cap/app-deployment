@@ -1,0 +1,98 @@
+# SPDX-License-Identifier: MIT-0
+---
+# tasks file for postgres
+- name: 編譯安裝
+  block:
+    - name: 安裝依賴 (Debian)
+      ansible.builtin.apt:
+        name:
+          - build-essential
+          - libevent-dev
+          - libssl-dev
+          - pkg-config
+          - libsystemd-dev
+        update_cache: true
+      when: ansible_distribution == "Ubuntu"
+    - name: 安裝依賴 (RedHat)
+      ansible.builtin.yum_repository:
+        name:
+          - gcc
+          - make
+          - libevent-devel
+          - openssl-devel
+          - kgconfig
+          - systemd-devel
+      when: ansible_distribution == "Rocky"
+    - name: 下載源碼檔
+      ansible.builtin.get_url:
+        url: "https://www.pgbouncer.org/downloads/files/{{ version }}/pgbouncer-{{ version }}.tar.gz"
+        dest: "~/"
+        mode: "0644"
+
+    - name: 解壓縮源碼檔
+      ansible.builtin.unarchive:
+        src: "~/pgbouncer-{{ version }}.tar.gz"
+        dest: "~/"
+        remote_src: true
+
+    - name: 執行 ./configure
+      ansible.builtin.command:
+        argv:
+          - ./configure
+          - --prefix=/usr/local
+          - --with-systemd
+        chdir: ~/pgbouncer-{{ version }}
+
+    - name: 編譯
+      community.general.make:
+        target: all
+        chdir: ~/pgbouncer-{{ version }}
+    - name: 安裝
+      community.general.make:
+        target: install
+        chdir: ~/pgbouncer-{{ version }}
+
+
+- name: 建立依賴目錄
+  block:
+    - name: 建立 etc directory
+      ansible.builtin.file:
+        path: /etc/pgbouncer
+        state: directory
+        mode: "0755"
+        owner: root
+        group: root
+
+    - name: 存放 pgbouncer.ini 文件
+      ansible.builtin.template:
+        src: pgbouncer.ini
+        dest: /etc/pgbouncer/
+        owner: postgres
+        group: postgres
+        mode: "0644"
+
+    - name: 存放 userlist.txt 文件
+      ansible.builtin.template:
+        src: userlist.txt
+        dest: /etc/pgbouncer/
+        owner: postgres
+        group: postgres
+        mode: "0644"
+
+    - name: 存放 rsyslog 文件
+      ansible.builtin.template:
+        src: 30-pgbouncer.conf
+        dest: /etc/rsyslog.d/
+        owner: syslog
+        group: adm
+        mode: "0644"
+      notify: Restart rsyslog
+
+    - name: 存放 service 檔案
+      ansible.builtin.template:
+        src: pgbouncer.service
+        dest: /etc/systemd/system/
+        owner: root
+        group: root
+        mode: "0644"
+      notify: start pgbouncer

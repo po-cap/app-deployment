@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: MIT-0
+---
+# defaults file for postgres
+version: "1.24.1"
+postgres_version: "16.9"
+archive_dir: "/mnt/nfs/pg_archive"

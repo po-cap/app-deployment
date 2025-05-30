@@ -1,0 +1,3 @@
+{% for item in users %}
+"{{ item.name }}" "{{ item.password }}"
+{% endfor %}

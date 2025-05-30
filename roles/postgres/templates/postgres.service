@@ -1,0 +1,16 @@
+[Unit]
+Description=PostgreSQL Database Service
+After=network.target
+
+[Service]
+Type=forking
+User=postgres
+Group=postgres
+ExecStart=/usr/local/pgsql/bin/pg_ctl start -D /var/lib/pgsql/data
+ExecReload=/usr/local/pgsql/bin/pg_ctl reload -D /var/lib/pgsql/data
+ExecStop=/usr/local/pgsql/bin/pg_ctl stop -D ${PGDATA}  -m smart
+Restart=on-failure
+TimeoutStopSec=60
+
+[Install]
+WantedBy=multi-user.target

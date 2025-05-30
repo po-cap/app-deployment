@@ -1,0 +1,28 @@
+argument_specs:
+  main:
+    short_description: "參數定義，這些是使用 role 的人可傳入的參數"
+    options:
+      group:
+        type: str
+        description: "NFS directories 的 group"
+        required: true
+      gid:
+        type: int
+        description: "NFS directories 的 owner 的 gid"
+        required: true
+      user:
+        type: str
+        description: "NFS directories 的 owner"
+        required: true
+      uid:
+        type: int
+        description: "NFS directories 的 owner 的 uid"
+        required: true
+      server_ip:
+        type: str
+        description: "NFS directories 的 group"
+        required: true
+      nfs_dirs:
+        type: list
+        description: "NFS directories"
+        required: true

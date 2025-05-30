@@ -1,0 +1,37 @@
+[Unit]
+Description=A lightweight connection pooler for PostgreSQL
+Documentation=man:pgbouncer(1)
+After=network.target postgresql.service
+Requires=network.target
+ConditionPathExists=/etc/pgbouncer/pgbouncer.ini
+
+[Service]
+Type=notify
+User=postgres
+Group=postgres
+# 限制服務權限
+UMask=0077
+# 安全相關設置
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+PrivateDevices=true
+CapabilityBoundingSet=
+# 日誌配置
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=pgbouncer
+# 主進程配置
+ExecStart=/usr/local/bin/pgbouncer -d -q /etc/pgbouncer/pgbouncer.ini
+ExecReload=/bin/kill -HUP $MAINPID
+KillSignal=SIGINT
+# 資源限制
+LimitNOFILE=65536
+# 重啟策略
+Restart=always
+RestartSec=3
+TimeoutSec=300
+
+[Install]
+WantedBy=multi-user.target

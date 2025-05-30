@@ -1,0 +1,66 @@
+# sss
+---
+# tasks file for nfs_client
+- name: NFS Client
+  block:
+    - name: 安裝 (Ubuntu)
+      ansible.builtin.apt:
+        name:
+          - nfs-kernel-server
+        update_cache: true
+        state: present
+      when: ansible_distribution == "Ubuntu"
+
+    - name: 安裝 (Rocky)
+      ansible.builtin.yum:
+        name:
+          - nfs-utils
+        state: present
+      when: ansible_distribution == "Rocky"
+
+    - name: 建立 group
+      ansible.builtin.group:
+        name: "{{ group }}"
+        gid: "{{ gid }}"
+        system: true
+        state: present
+
+    - name: 建立 user
+      ansible.builtin.user:
+        name: "{{ user }}"
+        uid: "{{ uid }}"
+        group: postgres
+        shell: /sbin/nologin
+        system: true
+        create_home: false
+        state: present
+
+    - name: Create mount directory
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ user }}"
+        group: "{{ group }}"
+        mode: '0755'
+      loop: "{{ nfs_dirs }}"
+
+    - name: Add configuration
+      ansible.builtin.lineinfile:
+        path: "/etc/exports"
+        line: "{{ item }} {{ sub_domain }}(rw,sync,no_subtree_check)"
+        state: present
+      loop: "{{ nfs_dirs }}"
+
+    - name: 啟動 NFS 服務 (Ubuntu)
+      ansible.builtin.service:
+        name: nfs-kernel-server
+        state: started
+        enabled: true
+      when: ansible_distribution == "Ubuntu"
+
+    - name: 啟動 NFS 服務 (Rocky)
+      ansible.builtin.service:
+        name: nfs-server
+        state: started
+        enabled: true
+      when: ansible_distribution == "Rocky"

@@ -1,0 +1,9 @@
+databases:
+  - hosts: 127.0.0.1
+    port: 5432
+    dbname: auth
+    user: doadmin
+  - hosts: 127.0.0.1
+    port: 5432
+    dbname: product
+    user: doadmin

@@ -1,0 +1,146 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: 下載編譯安裝
+  block:
+    - name: 安裝依賴 (Ubuntu)
+      ansible.builtin.apt:
+        name:
+          - build-essential
+          - icu-devtools
+          - libicu-dev
+          - pkg-config
+          - libreadline-dev
+          - zlib1g-dev
+          - libssl-dev
+        update_cache: true
+        state: present
+      when: ansible_distribution == "Ubuntu"
+
+    - name: 安裝依賴 (Rocky)
+      ansible.builtin.yum:
+        name:
+          - gcc
+          - make
+          - icu-devel
+          - readline-devel
+          - zlib-devel
+        state: present
+      when: ansible_distribution == "Rocky"
+
+    - name: 下載源碼
+      ansible.builtin.get_url:
+        url: https://ftp.postgresql.org/pub/source/v{{ postgres_version }}/postgresql-{{ postgres_version }}.tar.gz
+        dest: "/usr/local/src/"
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: 解壓縮源碼
+      ansible.builtin.unarchive:
+        src: "/usr/local/src/postgresql-{{ postgres_version }}.tar.gz"
+        dest: "/usr/local/src/"
+        remote_src: true
+
+    - name: 執行 ./configure
+      ansible.builtin.command:
+        argv:
+          - ./configure
+          - --prefix=/usr/local/pgsql
+          - --with-openssl
+        chdir: "/usr/local/src/postgresql-{{ postgres_version }}"
+      changed_when: false
+
+    - name: 編譯 & 安裝
+      ansible.builtin.shell:
+        cmd: make && make install
+        chdir: "/usr/local/src/postgresql-{{ postgres_version }}"
+        executable: /bin/bash
+      changed_when: false
+
+    - name: 加上 postgres 組
+      ansible.builtin.group:
+        name: postgres
+        gid: 128
+        system: true
+        state: present
+
+    - name: 加上 postgres 系統用戶
+      ansible.builtin.user:
+        name: postgres
+        uid: 122
+        group: postgres
+        shell: /sbin/nologin
+        system: true
+        create_home: false
+        state: present
+
+    - name: 把用戶加入 postgres group
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        group: postgres
+        append: true
+
+    - name: 创建独立的 sudoers 配置
+      ansible.builtin.copy:
+        dest: "/etc/sudoers.d/90_admin_postgres"
+        content: |
+          Defaults secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:/usr/local/pgsql/bin"
+          {{ ansible_user }} ALL=(postgres) NOPASSWD: /usr/bin/initdb
+          {{ ansible_user }} ALL=(postgres) /usr/bin/psql
+        owner: root
+        group: root
+        mode: "0440"
+        validate: "/usr/sbin/visudo -cf %s"
+
+    - name: 建立 DATA directory
+      ansible.builtin.file:
+        path: "/var/lib/pgsql/data"
+        state: directory
+        owner: postgres
+        group: postgres
+        mode: "0700"
+
+    - name: 確認是否已經初始化了
+      ansible.builtin.stat:
+        path: /var/lib/pgsql/data/global/pg_control
+      register: pg_status
+
+    - name: 初始化 cluster
+      ansible.builtin.command:
+        cmd: sudo -u postgres /usr/local/pgsql/bin/initdb -D /var/lib/pgsql/data
+      changed_when: false
+      when: not pg_status.stat.exists
+
+    - name: 變更 conf 檔案，引入 ./conf.d 目錄
+      ansible.builtin.lineinfile:
+        path: "/var/lib/pgsql/data/postgresql.conf"
+        regexp: '^#include_dir'
+        line: "include_dir='conf.d'"
+        backup: true
+        state: present
+
+    - name: 存放 service 檔案
+      ansible.builtin.template:
+        src: postgres.service
+        dest: /etc/systemd/system/
+        owner: root
+        group: root
+        mode: "0644"
+
+- name: 設定歸檔模式
+  block:
+    - name: 設定歸檔參數
+      ansible.builtin.template:
+        src: pg_archive.conf
+        dest: /var/lib/pgsql/data/conf.d
+        owner: postgres
+        group: postgres
+        mode: "0700"
+
+    - name: 上傳歸檔腳本
+      ansible.builtin.template:
+        src: pg_archive_wal.sh
+        dest: /usr/local/bin
+        owner: postgres
+        group: postgres
+        mode: "0700"

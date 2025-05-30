@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: MIT-0
+dependencies: []
+galaxy_info:
+  author: "Su Po Jen"
+  description: "Setting up NFS Server"
+  company: "supojen"
+  license: MIT
+  min_ansible_version: "2.1"
+  galaxy_tags: []

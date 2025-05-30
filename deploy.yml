@@ -1,0 +1,58 @@
+#- name: 啟動 databases
+#  hosts: all
+#  become: true
+#  tasks:
+#    - name: 安裝依賴 (Debian)
+#      ansible.builtin.debug:
+#        msg: "這是 Debian 系"
+#      when: ansible_distribution == "Ubuntu"
+#
+#    - name: 安裝依賴 (RHEL)
+#      ansible.builtin.debug:
+#        msg: "這是紅帽系"
+#      when: ansible_distribution == "Rocky"
+
+# - name: 安裝 adatabse
+#  hosts: postgres
+#  become: true
+#  pre_tasks:
+#    - name: 會安裝下列資料庫
+#      ansible.builtin.debug:
+#        msg: "{{ item.dbname }}: {{ item.user }}"
+#      loop: "{{ databases }}"
+#
+#  roles:
+#    - postgres
+
+- name: 安裝 nfs server
+  hosts: lime
+  become: true
+  roles:
+    - role: nfs_server
+      vars:
+        user: "postgres"
+        group: "postgres"
+        uid: 122
+        gid: 128
+        nfs_dirs:
+          - "/mnt/nfs/pg_backup"
+          - "/mnt/nfs/pg_archive"
+        sub_domain: "192.168.50.0/24"
+
+- name: 安裝 Postgres Cluster
+  hosts: guava
+  become: true
+  roles:
+    - role: nfs_client
+      vars:
+        user: "postgres"
+        group: "postgres"
+        uid: 122
+        gid: 128
+        server_ip: "lime"
+        nfs_dirs:
+          - client_path: "/mnt/nfs/pg_backup"
+            server_path: "/mnt/nfs/pg_backup"
+          - client_path: "/mnt/nfs/pg_archive"
+            server_path: "/mnt/nfs/pg_archive"
+    - role: postgres
