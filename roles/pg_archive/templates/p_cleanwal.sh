@@ -1,0 +1,1 @@
+find "${ARCHIVE_DIR}" -type f -name "000*" -mtime +{{ retension_days }} -exec rm -f {} \;

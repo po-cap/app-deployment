@@ -1,0 +1,12 @@
+argument_specs:
+  main:
+    short_description: "參數定義，這些是使用 role 的人可傳入的參數"
+    options:
+      package_name:
+        type: str
+        description: "Your app's package name"
+        required: true
+      fingerprint:
+        type: str
+        description: "android App Links 的 fingerprint"
+        required: true

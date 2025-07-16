@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: MIT-0
+---
+repositories:
+  - url: "https://github.com/po-cap/auth.git"
+    tag: "v1.0.14"
+    exposed_port: 7020
+    domain: "t8.supojen.com"
+    basename: "auth"
+
+  - url: "https://github.com/po-cap/userC.git"
+    tag: "v1.0.4"
+    exposed_port: 7777
+    domain: "t8.supojen.com" 
+    basename: "userC"
+
+dotnet_version: "9.0.301"
+
+OIDC: "https://t8.supojen.com"

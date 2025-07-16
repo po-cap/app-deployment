@@ -1,0 +1,19 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for app_links
+- block:
+  - name: 安裝依賴 (Ubuntu)
+    ansible.builtin.apt:
+      name:
+        - openjdk-11-jdk
+      update_cache: true
+      state: present
+    when: ansible_distribution == "Ubuntu"
+
+  - name: 安裝依賴 (Rocky)
+    ansible.builtin.apt:
+      name:
+        - java-11-openjdk-devel
+      update_cache: true
+      state: present
+    when: ansible_distribution == "Rocky"

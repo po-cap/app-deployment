@@ -1,0 +1,27 @@
+[Unit]
+Description=Valkey In-Memory Database
+After=network.target
+
+[Service]
+Type=notify
+ExecStart=/usr/local/bin/valkey-server /etc/valkey/valkey.conf
+ExecStop=/usr/local/bin/valkey-cli shutdown
+
+Restart=always
+User=valkey
+Group=valkey
+
+# 資源限制
+LimitNOFILE=65536
+LimitNPROC=4096
+LimitCORE=0
+MemoryMax=1G
+CPUQuota=50%
+
+# 日誌管理
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=valkey
+
+[Install]
+WantedBy=multi-user.target

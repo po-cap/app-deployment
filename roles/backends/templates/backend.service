@@ -1,0 +1,42 @@
+[Unit]                                                                                                       
+Description={{ basename }} server
+After=network.target
+
+[Service]
+WorkingDirectory=/var/www/{{ basename }}
+ExecStart=/usr/local/bin/dotnet /var/www/{{ basename }}/{{ item.basename[0] | upper }}{{ item.basename[1:] }}.Presentation.dll
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStop=/bin/kill -TERM $MAINPID
+
+Restart=always      # 崩潰後，自動重啟
+RestartSec=10       # 崩潰後，間隔 10 秒，自動重啟
+KillSignal=SIGTERM  # 優雅關閉
+TimeoutStopSec=30   # 提供 30 秒關機緩衝
+
+User=www-data
+Group=www-data
+
+# 環境變數
+Environment=ASPNETCORE_ENVIRONMENT={{ env }}
+Environment=DOTNET_PRINT_TELEMETRY_MESSAGE=false
+Environment=ASPNETCORE_URLS=http://*:{{ exposed_port }}
+Environment=ASPNETCORE_DIRECTORY=/etc/backend/{{ basename }}
+Environment=ASPNETCORE_DOMAIN={{ domain }}
+
+# 日誌
+SyslogIdentifier={{ basename }}
+# 下面配置，會讓日誌挑過 journald 直接發到 rsyslog
+#StandardOutput=syslog
+#StandardError=syslog
+#SyslogFacility=local0
+#SyslogLevel=info
+
+# 限制資源 (可選)
+LimitNOFILE=65536
+LimitCORE=infinity
+CPUQuota=200%
+MemoryHigh=2G
+MemoryMax=2.5G
+
+[Install]
+WantedBy=multi-user.target

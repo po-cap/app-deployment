@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: MIT-0
+---
+# tasks file for ddns
+
+- name: 下載依賴包 (ubuntu)
+  ansible.builtin.apt:
+    name:
+      - jq
+    update_cache: true
+    state: present
+  when: ansible_distribution == "Ubuntu"
+
+- name: 下載依賴包 (yum)
+  ansible.builtin.yum:
+    name:
+      - jq
+    state: present
+  when: ansible_distribution == "Rocky"
+
+- name: 上傳 DDNS 腳本
+  ansible.builtin.template:
+    src: "cloudflare_ddns.sh"
+    dest: /usr/local/bin
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: 執行 DDNS 腳本
+  ansible.builtin.command:
+    cmd: bash /usr/local/bin/cloudflare_ddns.sh
+  changed_when: false
+
+- name: 定時更新 DNS 紀錄
+  ansible.builtin.cron:
+    name: "DDNS update"
+    minute: "*/10"
+    job: "/usr/local/bin/cloudflare_ddns.sh >> /var/log/ddns.log 2>&1"
+    user: root

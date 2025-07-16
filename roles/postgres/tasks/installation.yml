@@ -1,0 +1,62 @@
+- name: 安裝依賴 (Ubuntu)
+  ansible.builtin.apt:
+    name:
+      - build-essential
+      - icu-devtools
+      - libicu-dev
+      - pkg-config
+      - libreadline-dev
+      - zlib1g-dev
+      - libssl-dev
+    update_cache: true
+    state: present
+  when: ansible_distribution == "Ubuntu"
+
+- name: 安裝依賴 (Rocky)
+  ansible.builtin.yum:
+    name:
+      - gcc
+      - make
+      - icu-devel
+      - readline-devel
+      - zlib-devel
+    state: present
+  when: ansible_distribution == "Rocky"
+
+- name: 下載源碼
+  ansible.builtin.get_url:
+    url: https://ftp.postgresql.org/pub/source/v{{ postgres_version }}/postgresql-{{ postgres_version }}.tar.gz
+    dest: "/usr/local/src/"
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: 解壓縮源碼
+  ansible.builtin.unarchive:
+    src: "/usr/local/src/postgresql-{{ postgres_version }}.tar.gz"
+    dest: "/usr/local/src/"
+    remote_src: true
+
+- name: 執行 ./configure
+  ansible.builtin.command:
+    argv:
+      - ./configure
+      - --prefix=/usr/local/pgsql
+      - --with-openssl
+    chdir: "/usr/local/src/postgresql-{{ postgres_version }}"
+  changed_when: false
+
+- name: 編譯 & 安裝
+  ansible.builtin.shell:
+    cmd: make && make install
+    chdir: "/usr/local/src/postgresql-{{ postgres_version }}"
+    executable: /bin/bash
+  changed_when: false
+
+- name: 存放 service 檔案
+  ansible.builtin.template:
+    src: postgres.service
+    dest: /etc/systemd/system/
+    owner: root
+    group: root
+    mode: "0644"

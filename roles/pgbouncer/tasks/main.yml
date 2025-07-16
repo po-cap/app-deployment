@@ -1,3 +1,106 @@
-#SPDX-License-Identifier: MIT-0
+# SPDX-License-Identifier: MIT-0
 ---
-# tasks file for pgbouncer
+# tasks file for postgres
+- name: 編譯安裝
+  block:
+    - name: 安裝依賴 (Debian)
+      ansible.builtin.apt:
+        name:
+          - build-essential
+          - libevent-dev
+          - libssl-dev
+          - pkg-config
+          - libsystemd-dev
+        update_cache: true
+        state: present
+      when: ansible_distribution == "Ubuntu"
+
+    - name: 安裝依賴 (RedHat)
+      ansible.builtin.yum:
+        name:
+          - gcc
+          - make
+          - libevent-devel
+          - openssl-devel
+          - kgconfig
+          - systemd-devel
+        state: present
+      when: ansible_distribution == "Rocky"
+
+    - name: 下載源碼檔
+      ansible.builtin.get_url:
+        url: "https://www.pgbouncer.org/downloads/files/{{ version }}/pgbouncer-{{ version }}.tar.gz"
+        dest: "/usr/local/src/"
+        mode: "0644"
+
+    - name: 解壓縮源碼檔
+      ansible.builtin.unarchive:
+        src: "/usr/local/src/pgbouncer-{{ version }}.tar.gz"
+        dest: "/usr/local/src/"
+        remote_src: true
+
+    - name: 執行 ./configure
+      ansible.builtin.command:
+        argv:
+          - ./configure
+          - --prefix=/usr/local/pgbouncer
+          - --with-systemd
+          - --with-libevent
+        chdir: /usr/local/src/pgbouncer-{{ version }}
+      changed_when: false
+
+    - name: 編譯 & 安裝
+      ansible.builtin.shell:
+        cmd: make && make install
+        chdir: "/usr/local/src/pgbouncer-{{ version }}"
+        executable: /bin/bash
+      changed_when: false
+
+    - name: 建立 /etc/pgbouncer 目錄
+      ansible.builtin.file:
+        path: /etc/pgbouncer
+        state: directory
+        owner: postgres
+        group: postgres
+        mode: "0644"
+
+    - name: 建立 pgbouncer.ini
+      ansible.builtin.template:
+        src: "pgbouncer.ini"
+        dest: "/etc/pgbouncer/"
+        owner: postgres
+        group: postgres
+        mode: "0644"
+
+    - name: 建立 userlist.txt
+      ansible.builtin.template:
+        src: "userlist.txt"
+        dest: "/etc/pgbouncer/"
+        owner: postgres
+        group: postgres
+        mode: "0644"
+
+    - name: 上傳建立認證書腳本
+      ansible.builtin.template:
+        src: "pgbouncer_ca.sh"
+        dest: "/usr/local/bin"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: 確認 pid 存放目錄存在
+      ansible.builtin.file:
+        path: /var/run/pgbouncer
+        state: directory
+        owner: postgres
+        group: postgres
+        mode: "0700"
+
+    - name: Move pgbouncer.service file
+      ansible.builtin.copy:
+        src: /usr/local/pgbouncer/share/doc/pgbouncer/pgbouncer.service
+        dest: /etc/systemd/system/pgbouncer.service
+        remote_src: true
+        owner: root
+        group: root
+        mode: '0644'

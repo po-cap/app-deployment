@@ -1,0 +1,42 @@
+- name: 加上 postgres 組
+  ansible.builtin.group:
+    name: postgres
+    gid: 128
+    system: true
+    state: present
+
+- name: 加上 postgres 系統用戶
+  ansible.builtin.user:
+    name: postgres
+    uid: 122
+    group: postgres
+    shell: /sbin/nologin
+    system: true
+    create_home: false
+    state: present
+
+- name: 建立環境檔案
+  ansible.builtin.copy:
+    dest: /etc/profile.d/pgsql.sh
+    content: |
+      export PATH=$PATH:/usr/local/pgsql/bin
+      export PGDATA=/var/lib/pgsql/data
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: 创建 sudoers 配置
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/90_admin_postgres"
+    content: |
+      # Defaults:postgres 表示 postgres 用戶用 sudo 時
+      # Defaults>postgres 表示切換成 postgres 用戶時(sudo -u postgres)
+      Defaults>postgres !env_reset
+      Defaults>postgres env_keep+="PGDATA PATH"
+      Defaults>postgres secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:/usr/local/pgsql/bin"
+      {{ ansible_user }} ALL=(postgres) PASSWD: /usr/local/pgsql/bin/*
+      {{ ansible_user }} ALL=(postgres) NOPASSWD: /usr/local/pgsql/bin/initdb
+    owner: root
+    group: root
+    mode: "0440"
+    validate: "/usr/sbin/visudo -cf %s"

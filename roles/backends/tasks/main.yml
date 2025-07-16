@@ -1,0 +1,194 @@
+# SPDX-License-Identifier: MIT-0
+---
+######################################################################
+# 安裝 dotnet SDK，因為需要 compile，其實，生產狀態下最好是安裝 runtime 就好
+######################################################################
+#- name: 检查 .NET 是否已安装
+#  ansible.builtin.command:
+#    cmd: dotnet --version
+#  register: dotnet_check
+#  ignore_errors: true
+#  changed_when: false
+
+## https://dotnet.microsoft.com/en-us/download/dotnet/9.0
+#- name: 下載源碼
+#  ansible.builtin.get_url:
+#    url: https://builds.dotnet.microsoft.com/dotnet/Sdk/{{ dotnet_version }}/dotnet-sdk-{{ dotnet_version }}-linux-arm64.tar.gz
+#    dest: "/usr/local/src/"
+#    owner: root
+#    group: root
+#    mode: "0755"
+#  when: dotnet_check.rc != 0
+
+#- name: 解壓縮源碼
+#  ansible.builtin.unarchive:
+#    src: "/usr/local/src/dotnet-sdk-{{ dotnet_version }}-linux-arm64.tar.gz"
+#    dest: "/usr/local/bin/"
+#    remote_src: true
+#  when: dotnet_check.rc != 0
+
+######################################################################
+# 下載代碼
+######################################################################
+- name: Dependecies
+  ansible.builtin.apt:
+    name:
+      - git
+    update_cache: true
+    state: present
+  when: ansible_distribution == "Ubuntu"
+
+- name: Clone repository (if not exists) or update
+  ansible.builtin.git:
+    repo: "{{ item.url }}"
+    dest: "/usr/local/src/{{ item.basename }}"
+    version: "{{ item.tag }}"
+    force: true  # 强制覆盖本地更改（谨慎使用）
+    clone: true
+    update: true
+  loop: "{{ repositories }}"
+
+######################################################################
+# 安裝 API
+######################################################################
+- name: Ensure publish directory exists
+  ansible.builtin.file:
+    path: "/var/www/{{ item.basename }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0750"
+  loop: "{{ repositories }}"
+
+- name: Publish the code
+  ansible.builtin.command:
+    cmd: >
+      dotnet publish
+      /usr/local/src/{{ item.basename }}/src/{{ item.basename[0] | upper }}{{ item.basename[1:] }}.Presentation/{{ item.basename[0] | upper }}{{ item.basename[1:] }}.Presentation.csproj
+      -c Release
+      -o /var/www/{{ item.basename }}
+    chdir: "/usr/local/src/{{ item.basename }}"
+  changed_when: true
+  loop: "{{ repositories }}"
+
+- name: 設定 services 檔案
+  ansible.builtin.template:
+    src: backend.service
+    dest: "/etc/systemd/system/{{ item.basename }}.service"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ repositories }}"
+  vars:
+    basename: "{{ item.basename }}"
+    exposed_port: "{{ item.exposed_port }}"
+    env: "{{ item.env | default('Production') }}"
+    domain: "{{ item.domain }}"
+
+- name: Enable and start service
+  ansible.builtin.systemd:
+    name: "{{ item.basename }}.service"
+    enabled: true
+    state: restarted
+    daemon_reload: true
+  loop: "{{ repositories }}"
+
+######################################################################
+# Configuration files
+######################################################################
+- name: Ensure key directory exists
+  ansible.builtin.file:
+    path: "/etc/backend/{{ item.basename }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0700"
+  loop: "{{ repositories }}"
+
+- name: Copy the configuration file into hosts
+  ansible.builtin.template:
+    src: "{{ item.basename }}.appsettings.json"
+    dest: "/etc/backend/{{ item.basename }}/appsettings.json"
+    owner: www-data
+    group: www-data
+    mode: "0700"
+  loop: "{{ repositories }}"
+
+######################################################################
+# 安裝密鑰
+######################################################################
+- name: Clone repository (if not exists) or update
+  ansible.builtin.git:
+    repo: "https://github.com/po-cap/key_generator.git"
+    dest: "/usr/local/src/key_generator"
+    version: main
+    force: true  # 强制覆盖本地更改（谨慎使用
+    clone: true
+    update: true
+
+- name: Publish the code
+  ansible.builtin.command:
+    cmd: >
+      dotnet publish
+      -c Release
+      -r linux-arm64
+      --self-contained true
+      -p:PublishSingleFile=true
+      -p:PublishTrimmed=true
+      -o ./publish-arm64
+    chdir: "/usr/local/src/key_generator"
+    creates: "/usr/local/bin/pokeygen" 
+  register: publish_keygen_result
+  changed_when: true
+
+- name: Install the key generator
+  ansible.builtin.copy:
+    src: "/usr/local/src/key_generator/publish-arm64/key_generator"
+    dest: "/usr/local/bin/pokeygen"
+    mode: "0755"
+    remote_src: true
+  when: publish_keygen_result is changed
+
+- name: Ensure key directory exists
+  ansible.builtin.file:
+    path: "/etc/backend/auth"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0700"
+
+- name: Generate rsa key
+  ansible.builtin.command:
+    cmd: pokeygen --rsa --output id_rsa.{{ item }}
+    chdir: "/etc/backend/auth"
+    creates: "/etc/backend/auth/id_rsa.{{ item }}" 
+  loop:
+    - "v1"
+    - "v2"
+    - "v3"
+  changed_when: true
+
+- name: Generate aes key
+  ansible.builtin.command:
+    cmd: pokeygen --aes --output id_aes
+    chdir: "/etc/backend/auth"
+    creates: "/etc/backend/auth/id_aes" 
+  changed_when: true
+
+- name: Change file permissions
+  ansible.builtin.file:
+    path: /etc/backend/auth/id_rsa.{{ item }}
+    owner: www-data
+    group: www-data
+    mode: "0600"
+  loop:
+    - "v1"
+    - "v2"
+    - "v3"
+
+- name: Change file permissions
+  ansible.builtin.file:
+    path: /etc/backend/auth/id_aes
+    owner: www-data
+    group: www-data
+    mode: "0600"

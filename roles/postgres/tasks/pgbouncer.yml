@@ -12,9 +12,11 @@
           - pkg-config
           - libsystemd-dev
         update_cache: true
+        state: present
       when: ansible_distribution == "Ubuntu"
+
     - name: 安裝依賴 (RedHat)
-      ansible.builtin.yum_repository:
+      ansible.builtin.yum:
         name:
           - gcc
           - make
@@ -22,7 +24,9 @@
           - openssl-devel
           - kgconfig
           - systemd-devel
+        state: present
       when: ansible_distribution == "Rocky"
+
     - name: 下載源碼檔
       ansible.builtin.get_url:
         url: "https://www.pgbouncer.org/downloads/files/{{ version }}/pgbouncer-{{ version }}.tar.gz"
@@ -41,12 +45,15 @@
           - ./configure
           - --prefix=/usr/local
           - --with-systemd
+          - --with-libevent
         chdir: ~/pgbouncer-{{ version }}
+      changed_when: false
 
     - name: 編譯
       community.general.make:
         target: all
         chdir: ~/pgbouncer-{{ version }}
+
     - name: 安裝
       community.general.make:
         target: install

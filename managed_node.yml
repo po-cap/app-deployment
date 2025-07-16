@@ -1,0 +1,10 @@
+- name: 在本機上設定 DDNS
+  hosts: localhost
+  connection: local # 關鍵：使用本地連接（無需 SSH）
+  become: true
+  roles:
+    - role: ddns
+      vars:
+        user: "sammy"
+        zone_name: "supojen.com"
+        record_name: "orange.supojen.com"

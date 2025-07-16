@@ -1,0 +1,26 @@
+- name: 上傳數據庫備份工具
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/usr/local/bin"
+    owner: postgres
+    group: postgres
+    mode: "0700"
+  loop:
+    - p_dump.sh
+    - p_restore.sh
+
+- name: 上傳 init.sql
+  ansible.builtin.copy:
+    src: init.sql
+    dest: /tmp/init.sql
+    owner: postgres
+    group: postgres
+    mode: "0600"
+
+- name: 存放 service 檔案
+  ansible.builtin.template:
+    src: postgres.service
+    dest: /etc/systemd/system/
+    owner: root
+    group: root
+    mode: "0644"

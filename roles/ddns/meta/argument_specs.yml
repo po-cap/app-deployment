@@ -1,0 +1,12 @@
+argument_specs:
+  main:
+    short_description: "參數定義，這些是使用 role 的人可傳入的參數"
+    options:
+      zone_name:
+        type: str
+        description: "Cloudflare 的 zone ID，有就是 Domain"
+        required: true
+      record_name:
+        type: str
+        description: "Sub Domain，要映射到 host 的 domain name"
+        required: true

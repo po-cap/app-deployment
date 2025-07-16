@@ -3,4 +3,11 @@
 # defaults file for postgres
 version: "1.24.1"
 postgres_version: "16.9"
+pg_pack_version: "1.5.2"
 archive_dir: "/mnt/nfs/pg_archive"
+
+total_mem: "{{ (ansible_memtotal_mb / 1024) | round(1) | int }}"
+other_app_mem: 0
+shared_buffers: "{{ (total_mem | int / 4) | round(1) | int }}"
+cache_effective_size: "{{ ((total_mem | int) - (shared_buffers | int) - (other_app_mem | int)) * 0.75 | float | round | int }}"
+is_SSD: true

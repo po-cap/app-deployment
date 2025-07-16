@@ -1,0 +1,16 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*",
+  "OIDC": "{{ OIDC }}",
+  "S3": {
+    "AccessKey": "{{ backend.userC.s3.accesskey }}",
+    "Secret": "{{ backend.userC.s3.secret }}",
+    "Url": "{{ backend.userC.s3.url }}",
+    "CDN": "{{ backend.userC.s3.cdn }}"
+  }
+}

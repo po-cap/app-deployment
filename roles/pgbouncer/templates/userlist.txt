@@ -1,0 +1,15 @@
+; userlist.txt
+; 用戶名和 MD5 雜湊密碼，這些是用戶在連接 PgBouncer 時會提供的憑證。
+; 這些用戶和密碼也必須在後端 PostgreSQL 中存在。
+;
+; -- 對於 pgbouncer_admin 和密碼 admin_pass
+; SELECT 'md5' || md5('admin_pass' || 'pgbouncer_admin');
+; -- 假設輸出是：md51a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d
+;
+; "webapp_user" "md5<hash_of_webapp_secret_and_webapp_user>"
+; "dev_user" "md5<hash_of_dev_secret_and_dev_user>"
+
+; 如果是使用 scram-sha-256
+; "username" "scram-sha-256|password_hash|salt|iterations"
+;     SELECT rolname, rolpassword FROM pg_authid WHERE rolcanlogin;
+;     pgbouncer -d -u youruser yourpassword

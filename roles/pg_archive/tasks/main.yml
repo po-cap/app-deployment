@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: MIT-0
+---
+# tasks file for pg_archive
+- name: 安裝依賴 (Ubuntu)
+  ansible.builtin.apt:
+    name:
+      - zstd
+    update_cache: true
+    state: present
+  when: ansible_distribution == "Ubuntu"
+
+- name: 安裝依賴 (Rocky)
+  ansible.builtin.yum:
+    name:
+      - zstd
+    state: present
+  when: ansible_distribution == "Rocky"
+
+- name: 上傳 archive conf 檔案
+  ansible.builtin.template:
+    src: pg_archive.conf
+    dest: /var/lib/pgsql/data/conf.d/
+    owner: postgres
+    group: postgres
+    mode: "0600"
+
+- name: 複製自動化腳本到 /usr/local/bin/
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: /usr/local/bin/
+    owner: postgres
+    group: postgres
+    mode: "0755"
+  loop:
+    - p_archive.sh
+    - p_cleanwal.sh
+    - p_unarchive.sh
+
+- name: 建立一個 cron task 定期清理歸檔檔案
+  ansible.builtin.cron:
+    name: "Cleanup wal files"
+    user: postgres
+    minute: "5"
+    hour: "*"
+    day: "*"
+    month: "*"
+    weekday: "*"
+    job: "/usr/local/bin/p_cleanwal.sh 2>&1"

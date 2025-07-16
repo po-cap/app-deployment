@@ -1,0 +1,12 @@
+argument_specs:
+  main:
+    short_description: "參數定義，這些是使用 role 的人可傳入的參數"
+    options:
+      pg_version:
+        type: float
+        description: "postgres 的版本號"
+        required: true
+      pg_repack_version:
+        type: float
+        description: "pg_repack 的版本號"
+        required: true

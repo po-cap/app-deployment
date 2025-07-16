@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: MIT-0
+---
+# handlers file for valkey
+- name: Build, test, and install Valkey
+  ansible.builtin.shell: |
+    make -j$(nproc)
+    make test
+    make PREFIX=/usr/local/valkey install
+  args:
+    chdir: "/usr/local/src/valkey"
+  changed_when: true

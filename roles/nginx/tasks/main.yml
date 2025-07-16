@@ -1,0 +1,200 @@
+# SPDX-License-Identifier: MIT-0
+---
+######################################################################
+# 在載編譯和安裝
+######################################################################
+- name: 檢查是否已經安裝 NGINX 了
+  ansible.builtin.stat:
+    path: /usr/local/nginx
+  register: nginx_dir_exists
+
+- name: 安裝依賴 (Ubuntu)
+  ansible.builtin.apt:
+    name:
+      - build-essential
+      - libpcre3-dev
+      - zlib1g-dev
+      - libssl-dev
+    update_cache: true
+    state: present
+  when: ansible_distribution == "Ubuntu"
+
+- name: 下載源碼
+  ansible.builtin.get_url:
+    url: https://nginx.org/download/nginx-{{ nginx_version }}.tar.gz
+    dest: "/usr/local/src/"
+    owner: root
+    group: root
+    mode: "0755"
+  when: not nginx_dir_exists.stat.exists
+
+- name: 解壓縮源碼
+  ansible.builtin.unarchive:
+    src: "/usr/local/src/nginx-{{ nginx_version }}.tar.gz"
+    dest: "/usr/local/src/"
+    remote_src: true
+  when: not nginx_dir_exists.stat.exists
+
+- name: 執行 ./configure
+  ansible.builtin.command:
+    argv:
+      - ./configure
+      - --user=www-data
+      - --group=www-data
+      - --prefix=/usr/local/nginx
+      - --conf-path=/etc/nginx/nginx.conf
+      - --with-http_ssl_module
+    chdir: "/usr/local/src/nginx-{{ nginx_version }}"
+  changed_when: false
+  when: not nginx_dir_exists.stat.exists
+
+- name: 編譯 & 安裝
+  ansible.builtin.shell:
+    cmd: make && make install
+    chdir: "/usr/local/src/nginx-{{ nginx_version }}"
+    executable: /bin/bash
+  changed_when: false
+  when: not nginx_dir_exists.stat.exists
+
+- name: 為 nginx 可執行檔建立軟鏈結
+  ansible.builtin.file:
+      src: /usr/local/nginx/sbin/nginx
+      dest: /usr/sbin/nginx
+      state: link
+      owner: root
+      group: root
+      mode: '0755'
+
+######################################################################
+# 關於系統用戶
+######################################################################
+- name: 加入 www-data 系統組
+  ansible.builtin.group:
+    name: www-data
+    gid: 33
+    system: true
+    state: present
+
+- name: 加入 www-data 系統用戶
+  ansible.builtin.user:
+    name: www-data
+    uid: 33
+    shell: /sbin/nologin
+    system: true
+    create_home: false
+    state: present
+
+######################################################################
+# 靜態資源
+######################################################################
+- name: /var/www 權限設定
+  ansible.builtin.file:
+    path: /var/www
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0755"
+
+- name: /var/www/html 權限設定
+  ansible.builtin.file:
+    path: /var/www/html
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0755"
+
+- name: 建立 HOME 頁面(index.html)
+  ansible.builtin.template:
+    src: index.html
+    dest: /var/www/html/index.html
+    owner: www-data
+    group: www-data
+    mode: "0644"
+
+######################################################################
+# conf
+######################################################################
+- name: 設定 /etc/nginx/nginx.conf
+  ansible.builtin.template:
+    src: nginx.conf
+    dest: /etc/nginx/nginx.conf
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+
+- name: 確認 conf 目錄是否存在
+  ansible.builtin.file:
+    path: /etc/nginx/conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: 建立 domain 的 server conf
+  ansible.builtin.template:
+    src: com.conf
+    dest: /etc/nginx/conf.d/{{ domain }}.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+######################################################################
+# service
+######################################################################
+- name: SYSTEMD 檔案
+  ansible.builtin.template:
+    src: nginx.service
+    dest: /etc/systemd/system/
+    owner: root
+    group: root
+    mode: "0644"
+
+######################################################################
+# CA 證書
+######################################################################
+- name: 安裝依賴 (認證相關)
+  ansible.builtin.apt:
+    name:
+      - certbot
+      - python3-certbot-nginx
+    update_cache: true
+    state: present
+  when: ansible_distribution == "Ubuntu"
+
+- name: 確認 acme-challenge 目錄在
+  ansible.builtin.file:
+    path: /var/www/certbot/.well-known/acme-challenge
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0755"
+
+- name: 申請證書前，確保服務已啟用
+  ansible.builtin.service:
+    daemon_reload: true
+    name: nginx
+    enabled: true
+    state: started
+
+- name: 申请证书（非交互模式）
+  ansible.builtin.command:
+    cmd: certbot certonly --webroot -w /var/www/html -d {{ domain }} --non-interactive --agree-tos --email brian71742@outlook.com
+  args:
+    creates: /etc/letsencrypt/live/{{ domain }}  # 如果证书已存在则跳过
+  register: certbot_result
+  changed_when: "'No renewals were attempted' not in certbot_result.stdout"
+
+- name: 修改 conf
+  ansible.builtin.template:
+    src: com.ssl.conf
+    dest: /etc/nginx/conf.d/{{ domain }}.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: 重新啟動服務
+  ansible.builtin.service:
+    name: nginx
+    enabled: true
+    state: restarted

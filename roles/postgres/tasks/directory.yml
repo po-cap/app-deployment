@@ -1,0 +1,16 @@
+- name: 建立 DATA directory
+  ansible.builtin.file:
+    path: "/var/lib/pgsql/data"
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: "0700"
+
+- name: 建立日誌目錄
+  ansible.builtin.file:
+    path: /var/log/pgsql
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: "0750"
+    recurse: true

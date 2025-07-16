@@ -15,3 +15,42 @@
     state: started
     enabled: true
     daemon_reload: true
+
+
+- name: Enable postgres
+  ansible.builtin.service:
+    name: postgres.service
+    enabled: true
+  when: postgresql_service_managed | default(true)
+
+- name: Disable postgres
+  ansible.builtin.service:
+    name: postgres.service
+    enabled: false
+  when: postgresql_service_managed | default(true)
+
+- name: Restart postgres
+  ansible.builtin.service:
+    name: postgres.service
+    state: restarted
+    enabled: "{{ postgresql_service_enabled | default(yes) }}"
+  when: postgresql_service_managed | default(true)
+
+- name: Reload postgres
+  ansible.builtin.service:
+    name: postgres.service
+    state: reloaded
+  when: postgresql_service_managed | default(true)
+
+- name: Stop postgres
+  ansible.builtin.service:
+    name: postgres.service
+    state: stopped
+  when: postgresql_service_managed | default(true)
+
+- name: Start postgres
+  ansible.builtin.service:
+    name: postgres.service
+    state: started
+    enabled: "{{ postgresql_service_enabled | default(yes) }}"
+  when: postgresql_service_managed | default(true)

@@ -3,7 +3,7 @@
 # tasks file for nfs_client
 - name: NFS Client
   block:
-    - name: 安裝 (Ubuntu)
+    - name: 安裝 nfs-common (Ubuntu)
       ansible.builtin.apt:
         name:
           - nfs-common
@@ -11,7 +11,7 @@
         state: present
       when: ansible_distribution == "Ubuntu"
 
-    - name: 安裝 (Rocky)
+    - name: 安裝 nfs-utils (Rocky)
       ansible.builtin.yum:
         name:
           - nfs-utils

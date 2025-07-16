@@ -1,0 +1,16 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "ConnectionStrings": {
+    "Main": "{{ backend.auth.connectionstrings.main }}",
+    "Redis": "{{ backend.auth.connectionstrings.redis }}"
+  },
+  "line": {
+    "ID": "{{ backend.auth.line.id }}",
+    "Secret": "{{ backend.auth.line.secret }}"
+  }
+}

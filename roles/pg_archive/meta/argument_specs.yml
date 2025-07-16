@@ -1,0 +1,12 @@
+argument_specs:
+  main:
+    short_description: "參數定義，這些是使用 role 的人可傳入的參數"
+    options:
+      retention_days:
+        type: int
+        description: "檔案要保留幾天"
+        required: false
+      archive_dir:
+        type: str
+        description: "歸檔目錄"
+        required: true

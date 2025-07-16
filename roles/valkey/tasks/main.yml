@@ -1,0 +1,181 @@
+# SPDX-License-Identifier: MIT-0
+---
+######################################################################
+# 在載編譯和安裝
+######################################################################
+- block:
+  - name: 安裝依賴 (Ubuntu)
+    ansible.builtin.apt:
+      name:
+        - build-essential
+        - tcl
+        - tcl-dev
+        - git
+      update_cache: true
+      state: present
+    when: ansible_distribution == "Ubuntu"
+
+  - name: 安裝依賴 (Rocky)
+    ansible.builtin.apt:
+      name:
+        - tcl
+        - tcl-devel
+        - git
+      update_cache: true
+      state: present
+    when: ansible_distribution == "Rocky"
+
+  - name: Check if target version/tag is already checked out
+    ansible.builtin.command:
+      cmd: "git describe --tags --exact-match"
+    args:
+      chdir: "/usr/local/src/valkey"
+    register: valkey_version_check
+    failed_when: false
+    changed_when: false
+
+  - name: Clone repository (if not exists) or update
+    ansible.builtin.git:
+      repo: "https://github.com/valkey-io/valkey.git"
+      dest: "/usr/local/src/valkey"
+      version: "{{ version }}"
+      force: true  # 强制覆盖本地更改（谨慎使用）
+      clone: true
+      update: true
+    register: git_result
+    when: valkey_version_check.stdout != version
+    notify: Build, test, and install Valkey
+
+  vars:
+    ansible_lint:
+      skip:
+        - git-latest
+        - command-instead-of-module
+
+######################################################################
+# 建立 valkey 使用者和 valkey 組
+######################################################################
+- block:
+  - name: 加上 valkey 組
+    ansible.builtin.group:
+      name: valkey
+      gid: 637
+      system: true
+      state: present
+
+  - name: 加上 valkey 系統用戶
+    ansible.builtin.user:
+      name: valkey
+      uid: 637
+      group: valkey
+      shell: /sbin/nologin
+      system: true
+      create_home: false
+      state: present
+
+  - name: 建立環境檔案
+    ansible.builtin.copy:
+      dest: /etc/profile.d/valkey.sh
+      content: |
+        export PATH=$PATH:/usr/local/valkey/bin
+      owner: root
+      group: root
+      mode: '0644'
+
+  - name: 创建 sudoers 配置
+    ansible.builtin.copy:
+      dest: "/etc/sudoers.d/90_admin_valkey"
+      content: |
+        Defaults>valkey secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:/usr/local/valkey/bin"
+        {{ ansible_user }} ALL=(valkey) PASSWD: /usr/local/valkey/bin/*
+      owner: root
+      group: root
+
+######################################################################
+# Configuration File
+######################################################################
+- block:
+  - name: make directory for conf files
+    ansible.builtin.file:
+      path: /etc/valkey
+      state: directory
+      owner: valkey
+      group: valkey
+      mode: '0755'
+
+  - name: Copy files from /usr/local/src/valkey to /etc/valkey
+    ansible.builtin.copy:
+      src: /usr/local/src/valkey/valkey.conf
+      dest: /etc/valkey/valkey.conf
+      remote_src: true
+      owner: valkey
+      group: valkey
+      mode: '0755'
+
+  - name: 變更 bind 參數
+    ansible.builtin.lineinfile:
+      path: "/etc/valkey/valkey.conf"
+      regexp: '^bind'
+      line: "bind 127.0.0.1 -::1 {{ ansible_default_ipv4.address }}"
+      backup: false
+      state: present
+
+  - name: 變更 protected-mode 參數
+    ansible.builtin.lineinfile:
+      path: "/etc/valkey/valkey.conf"
+      regexp: '^protected-mode'
+      line: "protected-mode no"
+      backup: false
+      state: present
+
+  - name: 變更 daemonize 參數
+    ansible.builtin.lineinfile:
+      path: "/etc/valkey/valkey.conf"
+      regexp: '^daemonize'
+      line: "daemonize yes"
+      backup: false
+      state: present
+
+  - name: 變更 dir 參數
+    ansible.builtin.lineinfile:
+      path: "/etc/valkey/valkey.conf"
+      regexp: '^dir'
+      line: "dir /var/lib/valkey"
+      backup: false
+      state: present
+
+  - name: 變更 pidfile 參數
+    ansible.builtin.lineinfile:
+      path: "/etc/valkey/valkey.conf"
+      regexp: '^pidfile'
+      line: "pidfile /var/run/valkey/valkey_6379.pid"
+      backup: false
+      state: present
+
+######################################################################
+# 建立 valkey 使用者和 valkey 組
+######################################################################
+- block:
+  - name: 建立數據目錄
+    ansible.builtin.file:
+      path: /var/lib/valkey
+      state: directory
+      owner: valkey
+      group: valkey
+      mode: '0750'
+  
+  - name: 建立運行時文件目錄
+    ansible.builtin.file:
+      path: /var/run/valkey
+      state: directory
+      owner: valkey
+      group: valkey
+      mode: '0755'
+
+- name: 存放 service 檔案
+  ansible.builtin.template:
+    src: valkey.service
+    dest: /etc/systemd/system/
+    owner: root
+    group: root
+    mode: "0644"
