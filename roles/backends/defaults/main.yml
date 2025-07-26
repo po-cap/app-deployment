@@ -2,13 +2,13 @@
 ---
 repositories:
   - url: "https://github.com/po-cap/auth.git"
-    tag: "v1.0.14"
+    tag: "v1.0.15"
     exposed_port: 7020
     domain: "t8.supojen.com"
     basename: "auth"
 
   - url: "https://github.com/po-cap/userC.git"
-    tag: "v1.0.4"
+    tag: "v1.0.5"
     exposed_port: 7777
     domain: "t8.supojen.com" 
     basename: "userC"
