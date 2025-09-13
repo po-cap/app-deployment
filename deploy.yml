@@ -35,15 +35,23 @@
 
 
 #- name: 安裝 valkey
-#  hosts: lemon
+#  hosts: pinia
 #  become: true
 #  roles:
 #    - role: valkey
 
-- name: 安裝服務器
-  hosts: pinia
+- name: VPN
+  hosts: guava
   become: true
   roles:
+    - role: nginx
+      vars:
+        domain: "e04.supojen.com"
+
+#- name: 安裝服務器
+#  hosts: pinia
+#  become: true
+#  roles:
     #- role: ddns
     #  vars:
     #    zone_name: "supojen.com"

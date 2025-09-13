@@ -7,6 +7,9 @@
   },
   "AllowedHosts": "*",
   "OIDC": "{{ OIDC }}",
+  "ConnectionStrings": {
+    "Main": "{{ backend.userC.connectionstrings.main }}"
+  },
   "S3": {
     "AccessKey": "{{ backend.userC.s3.accesskey }}",
     "Secret": "{{ backend.userC.s3.secret }}",

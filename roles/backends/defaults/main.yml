@@ -2,17 +2,28 @@
 ---
 repositories:
   - url: "https://github.com/po-cap/auth.git"
-    tag: "v1.0.15"
+    tag: "v1.1.1"
     exposed_port: 7020
     domain: "t8.supojen.com"
     basename: "auth"
 
   - url: "https://github.com/po-cap/userC.git"
-    tag: "v1.0.5"
+    tag: "v2.1.23"
     exposed_port: 7777
     domain: "t8.supojen.com" 
     basename: "userC"
 
-dotnet_version: "9.0.301"
+  - url: "https://github.com/po-cap/message.git"
+    tag: "v1.3.2"
+    exposed_port: 5084
+    domain: "t8.supojen.com"
+    basename: "message"
 
+  - url: "https://github.com/po-cap/ws.git"
+    tag: "v1.0.5"
+    exposed_port: 5155
+    domain: "t8.supojen.com"
+    basename: "WS"
+
+dotnet_version: "9.0.301"
 OIDC: "https://t8.supojen.com"

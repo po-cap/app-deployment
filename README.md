@@ -44,3 +44,29 @@ sudo showmount -e lime
 ansible lint 的配置文件在 ~/.ansible-lint
 
 
+# 用 nginx 做四層代理給 postgres
+```nginx.conf
+stream {
+
+    upstream postgres_backend {
+        server 192.168.50.57:5432
+    }
+
+    server {
+        listen 5432 ssl;
+        proxy_pass postgres_backend;
+
+        proxy_connect_timeout 1s;
+        proxy_timeout 3s;
+
+        # SSL 配置
+        ssl_certificate /etc/letsencrypt/live/t8.supojen.com/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/t8.supojen.com/privkey.pem;
+
+        # SSL 強化設定（Certbot 會產生這個檔案）
+        include /etc/letsencrypt/options-ssl-nginx.conf;
+        ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    }
+}
+```

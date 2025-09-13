@@ -1,0 +1,20 @@
+{
+  "Logging": {
+    "LogLevel": {
+        "Default": "Information",
+        "Microsoft.AspNetCore": "Warning",
+        "Microsoft.EntityFrameworkCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*",
+  "ConnectionStrings": {
+    "Main": "{{ backend.message.connectionstrings.main }}"
+  },
+  "OIDC": "{{ OIDC }}",
+  "S3": {
+    "AccessKey": "{{ backend.message.s3.accesskey }}",
+    "Secret": "{{ backend.message.s3.secret }}",
+    "Url": "{{ backend.message.s3.url }}",
+    "CDN": "{{ backend.message.s3.cdn }}"
+  }
+}

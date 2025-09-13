@@ -46,14 +46,18 @@
     when: valkey_version_check.stdout != version
     notify: Build, test, and install Valkey
 
-  vars:
-    ansible_lint:
-      skip:
-        - git-latest
-        - command-instead-of-module
+  #vars:
+  #  ansible_lint:
+  #    skip:
+  #      - git-latest
+  #      - command-instead-of-module
 
 ######################################################################
 # 建立 valkey 使用者和 valkey 組
+# 
+# sudo useradd -r -M -s /usr/sbin/nologin -u 637 -g 637 valkey
+# id -u valkey
+# id -g valkey
 ######################################################################
 - block:
   - name: 加上 valkey 組
@@ -90,6 +94,8 @@
         {{ ansible_user }} ALL=(valkey) PASSWD: /usr/local/valkey/bin/*
       owner: root
       group: root
+      mode: "0440"
+      validate: "/usr/sbin/visudo -cf %s"
 
 ######################################################################
 # Configuration File
@@ -112,45 +118,53 @@
       group: valkey
       mode: '0755'
 
-  - name: 變更 bind 參數
-    ansible.builtin.lineinfile:
-      path: "/etc/valkey/valkey.conf"
-      regexp: '^bind'
-      line: "bind 127.0.0.1 -::1 {{ ansible_default_ipv4.address }}"
-      backup: false
-      state: present
+  #- name: 變更 bind 參數
+  #  ansible.builtin.lineinfile:
+  #    path: "/etc/valkey/valkey.conf"
+  #    regexp: '^bind'
+  #    line: "bind 127.0.0.1 -::1 {{ ansible_default_ipv4.address }}"
+  #    backup: false
+  #    state: present
 
-  - name: 變更 protected-mode 參數
-    ansible.builtin.lineinfile:
-      path: "/etc/valkey/valkey.conf"
-      regexp: '^protected-mode'
-      line: "protected-mode no"
-      backup: false
-      state: present
+  #- name: 變更 protected-mode 參數
+  #  ansible.builtin.lineinfile:
+  #    path: "/etc/valkey/valkey.conf"
+  #    regexp: '^protected-mode'
+  #    line: "protected-mode no"
+  #    backup: false
+  #    state: present
 
-  - name: 變更 daemonize 參數
-    ansible.builtin.lineinfile:
-      path: "/etc/valkey/valkey.conf"
-      regexp: '^daemonize'
-      line: "daemonize yes"
-      backup: false
-      state: present
+  #- name: 變更 daemonize 參數
+  #  ansible.builtin.lineinfile:
+  #    path: "/etc/valkey/valkey.conf"
+  #    regexp: '^daemonize'
+  #    line: "daemonize yes"
+  #    backup: false
+  #    state: present
 
-  - name: 變更 dir 參數
-    ansible.builtin.lineinfile:
-      path: "/etc/valkey/valkey.conf"
-      regexp: '^dir'
-      line: "dir /var/lib/valkey"
-      backup: false
-      state: present
+  #- name: 變更 dir 參數
+  #  ansible.builtin.lineinfile:
+  #    path: "/etc/valkey/valkey.conf"
+  #    regexp: '^dir'
+  #    line: "dir /var/lib/valkey"
+  #    backup: false
+  #    state: present
 
-  - name: 變更 pidfile 參數
-    ansible.builtin.lineinfile:
-      path: "/etc/valkey/valkey.conf"
-      regexp: '^pidfile'
-      line: "pidfile /var/run/valkey/valkey_6379.pid"
-      backup: false
-      state: present
+  #- name: 變更 pidfile 參數
+  #  ansible.builtin.lineinfile:
+  #    path: "/etc/valkey/valkey.conf"
+  #    regexp: '^pidfile'
+  #    line: "pidfile /var/run/valkey/valkey_6379.pid"
+  #    backup: false
+  #    state: present
+
+  #- name: 變更 pidfile 參數
+  #  ansible.builtin.lineinfile:
+  #    path: "/etc/valkey/valkey.conf"
+  #    regexp: '^logfile'
+  #    line: "logfile /var/log/valkey/valkey-server.log"
+  #    backup: false
+  #    state: present
 
 ######################################################################
 # 建立 valkey 使用者和 valkey 組
@@ -167,6 +181,14 @@
   - name: 建立運行時文件目錄
     ansible.builtin.file:
       path: /var/run/valkey
+      state: directory
+      owner: valkey
+      group: valkey
+      mode: '0755'
+
+  - name: 建立日誌目錄
+    ansible.builtin.file:
+      path: /var/log/valkey
       state: directory
       owner: valkey
       group: valkey
